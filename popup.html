@@ -7,29 +7,60 @@
 <html>
   <head>
     <title>Getting Started Extension's Popup</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
+
     <style type="text/css">
-
+    body {}
+    .card {
+      overflow: hidden;
+      box-sizing: border-box;
+      padding: 20px;
+      max-width: 230px;
+      position: relative;
+      min-height: 150px;
+      text-align: center;
+      display: flex;
+    }
+    .output {
+    }
+    .log {
+      margin-bottom: 0;
+      opacity: 0;
+      box-sizing: border-box;
+      text-align: center;
+      padding: 6px;
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      left: 0;
+      right: 0;
+      background-color: #333;
+      height: 40px;
+      color: #fff;
+      transform: translateY(40px);
+      transition: all .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .log.active {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .fab {
+      transition: transform .3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+    .fab.active {
+      transform: translateY(-20px);
+    }
     </style>
-
-    <!--
-      - JavaScript and HTML must be in separate files: see our Content Security
-      - Policy documentation[1] for details and explanation.
-      -
-      - [1]: https://developer.chrome.com/extensions/contentSecurityPolicy
-    -->
-    <script src="popup.js"></script>
   </head>
-
   <body>
-    <h1 class="center" id="headline">yell things</h1>
-    <div id="info">
-      <button type="button" id="setting"> fix mic</button>
-      <button type="button" id="start_button">
-        <img/ id="start_img" src="mic.gif" alt="Start"></button>
+    <div class="card">
+      <button id="toggle" class="mdl-button fab mdl-button--fab mdl-button--colored">
+        <i id="toggle_icon" class="material-icons">mic</i>
+      </button>
+      <button style="display: none" type="button" id="fix_mic">fix mic</button>
+      <p class="log" id="log">left</p>
     </div>
-    <div id="results">
-      <textarea id="log"></textarea>
-    </div>
-
+    <script src="popup.js"></script>
   </body>
 </html>

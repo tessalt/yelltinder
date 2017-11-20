@@ -1,175 +1,148 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+(function() {
 
-function debounce(func, wait, immediate) {
-	var timeout;
-	return function() {
-		var context = this, args = arguments;
-		var later = function() {
-			timeout = null;
-			if (!immediate) func.apply(context, args);
-		};
-		var callNow = immediate && !timeout;
-		clearTimeout(timeout);
-		timeout = setTimeout(later, wait);
-		if (callNow) func.apply(context, args);
-	};
-};
 
-function click(e) {
-  chrome.tabs.executeScript(null,
-      {code:"document.body.style.backgroundColor='" + e.target.id + "'"});
-  window.close();
-}
-
-function nope() {
-  chrome.tabs.executeScript(null, {
-    code: "document.querySelector('.recsGamepad__button--dislike').click()"}
-  );
-}
-
-function yep() {
-  chrome.tabs.executeScript(null, {
-    code: "document.querySelector('.recsGamepad__button--like').click()"}
-  );
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-
-  var setting = document.getElementById('setting')
-
-setting.addEventListener("click", function () {
-  chrome.tabs.create({
-      url: chrome.runtime.getURL("options.html")
-  });
-});
-
-  var start_button = document.getElementById('start_button')
-  var log = document.getElementById('log')
-
-  var final_transcript = '';
-  var recognizing = false;
-  var ignore_onend;
-  var start_timestamp;
-
-  if (!('webkitSpeechRecognition' in window)) {
-    console.log('sorry for your browser')
-  } else {
-    var recognition = new webkitSpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onstart = function() {
-      recognizing = true;
-      console.log('starting')
-      console.log('speak now')
-    };
-
-    recognition.onerror = function(event) {
-      if (event.error == 'no-speech') {
-        console.log('no speech')
-        ignore_onend = true;
-      }
-      if (event.error == 'audio-capture') {
-        console.log('no mic')
-        ignore_onend = true;
-      }
-      if (event.error == 'not-allowed') {
-        if (event.timeStamp - start_timestamp < 100) {
-          console.log('blocked')
-        } else {
-          console.log('not allowed')
-        }
-        ignore_onend = true;
-      }
-    };
-
-    recognition.onend = function() {
-      recognizing = false;
-      if (ignore_onend) {
-        return;
-      }
-      if (!final_transcript) {
-        console.log('info_start');
-        return;
-      }
-      if (window.getSelection) {
-        window.getSelection().removeAllRanges();
-        var range = document.createRange();
-        range.selectNode(document.getElementById('final_span'));
-        window.getSelection().addRange(range);
-      }
-    };
-
-recognition.onresult = debounce(onResult, 300)
-
-    function onResult (event) {
-      var interim_transcript = '';
-      for (var i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          final_transcript += event.results[i][0].transcript;
-        } else {
-          var word = event.results[i][0].transcript;
-          console.log('heard', word)
-          swipe(word);
-          interim_transcript += event.results[i][0].transcript;
-          log.value = interim_transcript;
-        }
-      }
-    };
+  const DOM = {
+    toggle: document.getElementById('toggle'),
+    button_icon: document.getElementById('toggle_icon'),
+    log: document.getElementById('log'),
+    debug: document.getElementById('debug'),
+    fix_mic: document.getElementById('fix_mic')
   }
 
-  function swipe(word) {
-    console.log('calling swipe on', word)
-    var nopeWords = /no$|nope|ew|gross|bad|left/g;
-    var yepWords = /yes|yeah|yep|sure|okay|right/g;
-    if (word.match(nopeWords)) {
-      nope();
-    } else if (word.match(yepWords)) {
-      yep();
-    }
+  const hostSelectors = {
+    nope: "document.querySelector('.recsGamepad__button--dislike')",
+    yep: "document.querySelector('.recsGamepad__button--like')",
+    more: "document.querySelector('.recCard')",
+    back: "document.querySelectorAll('.pageButton')[0]",
+    next: "document.querySelectorAll('.pageButton')[1]",
   }
 
-  function swipeRight(word) {
-    if (word.match(yepWords)) {
-      yep();
-    }
+  const matches = {
+    nope: /nope|gross|bad|left|boo|yikes/g,
+    yep: /yes|yeah|yep|sure|good|okay|right|damn|guess/g,
+    more: /more|maybe|pics/g
   }
 
-  start_button.addEventListener('click', startButton)
-
-  function startButton(event) {
-    if (recognizing) {
-      recognition.stop();
-      return;
-    }
-    final_transcript = '';
-    recognition.lang = 'en-US';
-    recognition.start();
-    ignore_onend = false;
-    start_img.src = 'mic-slash.gif';
-    showInfo('info_allow');
-    showButtons('none');
-    start_timestamp = event.timeStamp;
-  }
-
-  function showInfo(s) {
-    if (s) {
-      for (var child = info.firstChild; child; child = child.nextSibling) {
-        if (child.style) {
-          child.style.display = child.id == s ? 'inline' : 'none';
-        }
+  function triggerHostClick(element) {
+    chrome.tabs.query({currentWindow: true, active: true}, function(tabs){
+      var url = tabs[0].url;
+      if (url.match(/tinder.com/)) {
+        chrome.tabs.executeScript(null, {
+          code: `${element}.click();`}
+        );
+      } else {
+        alert('not tinder')
       }
-      info.style.visibility = 'visible';
+    });
+  }
+
+  function recognize(result) {
+    DOM.log.classList.add('active');
+    DOM.log.textContent = result;
+    if (result.match(matches.nope)) {
+      log.style.color = '#f57e7e';
+      triggerHostClick(hostSelectors.nope);
+    } else if (result.match(matches.yep)) {
+      log.style.color = '#71e875';
+      triggerHostClick(hostSelectors.yep);
+    } else if (result.match(matches.more)) {
+      log.style.color = '#7ed2f5';
+      triggerHostClick(hostSelectors.more);
+    } else if (result.match(/back/)) {
+      triggerHostClick(hostSelectors.back);
+    } else if (result.match(/next/)) {
+      triggerHostClick(hostSelectors.next);
+      next();
     } else {
-      info.style.visibility = 'hidden';
+      log.style.color = 'white'
     }
   }
 
-var current_style;
-function showButtons(style) {
-}
+  const state = {
+    listening: false,
+    shouldRestart: false
+  }
 
+  const recognition = new webkitSpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimresults = true;
+  recognition.lang = 'en-US';
 
-});
+  recognition.onstart = () => {
+    console.log('LISTENER: start');
+    DOM.fix_mic.style.display = 'none';
+  }
+
+  recognition.onend = () => {
+    console.log('LISTENER: stop');
+    if (state.shouldRestart) {
+      recognition.start();
+      state.shouldRestart = false;
+    }
+  }
+
+  recognition.onresult = (event) => {
+    for (var i = event.resultIndex; i < event.results.length; ++i) {
+      const {transcript, confidence} = event.results[i][0];
+      recognize(transcript)
+    }
+  }
+
+  recognition.onspeechstart = () => {
+    state.listening = true;
+    setTimeout(() => {
+      state.shouldRestart = true;
+      recognition.stop();
+    }, 300)
+    DOM.log.textContent = '...'
+  }
+
+  recognition.onspeechend = () => {
+    DOM.log.textContent = '-';
+  }
+
+  recognition.onError = ({error}) => {
+    DOM.fix_mic.style.display = 'block';
+    if (error == 'no-speech') {
+      console.log('LISTENER: ERROR: no speech')
+    }
+    if (event.error == 'audio-capture') {
+      console.log('LISTENER: ERROR: no mic')
+    }
+    if (event.error == 'not-allowed') {
+      if (event.timeStamp - start_timestamp < 100) {
+        console.log('LISTENER: ERROR: blocked')
+      } else {
+        console.log('LISTENER: ERROR: not allowed')
+      }
+    }
+  }
+
+  DOM.toggle.addEventListener('click', () => {
+    if (state.listening) {
+      recognition.stop();
+      DOM.button_icon.textContent = 'mic'
+      state.shouldRestart = false;
+      DOM.toggle.classList.remove('active');
+      DOM.log.classList.remove('active');
+      DOM.log.textContent = ''
+      state.listening = false;
+    } else {
+      recognition.start();
+      DOM.toggle.classList.add('active');
+      DOM.log.classList.add('active');
+      DOM.log.textContent = '-';
+      DOM.button_icon.textContent = 'mic_off'
+      state.listening = true;
+    }
+  })
+
+  DOM.fix_mic.addEventListener('click', () => {
+    chrome.tabs.create({
+      url: chrome.runtime.getURL('options.html')
+    });
+  });
+})();
+/*
+
+*/
