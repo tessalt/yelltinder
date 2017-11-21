@@ -51,6 +51,11 @@
     .fab.active {
       transform: translateY(-20px);
     }
+    .fix {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
     </style>
   </head>
   <body>
@@ -58,7 +63,7 @@
       <button id="toggle" class="mdl-button fab mdl-button--fab mdl-button--colored">
         <i id="toggle_icon" class="material-icons">mic</i>
       </button>
-      <button style="display: none" type="button" id="fix_mic">fix mic</button>
+      <button class="fix mdl-button" type="button" id="fix_mic">fix mic?</button>
       <p class="log" id="log">left</p>
     </div>
     <script src="popup.js"></script>
